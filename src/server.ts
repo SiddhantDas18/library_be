@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt'
 import cors from 'cors'
 import prismaClient from "./db"
 import middleware from "./middleware";
+import { Param } from "@prisma/client/runtime/library";
 
 
 const app = express()
@@ -276,6 +277,188 @@ app.post("/borrow/:id", middleware, async function(req, res) {
         })
     }
 })
+
+app.get("/my-books", middleware, async function(req, res) {
+    const user_id = (req as any).id
+
+    try {
+        const borrowedBooks = await prismaClient.borrowed.findMany({
+            where: {
+                borrowed_user: user_id
+            }
+        })
+
+        res.json({
+            msg: "Borrowed books retrieved successfully",
+            books: borrowedBooks
+        })
+    } catch(e) {
+        res.json({
+            msg: (e as Error).toString()
+        })
+    }
+})
+
+app.get("/checkBorrow/:id",middleware,async function(req,res){
+    const customerID = parseInt(req.params.id)
+    const user_id=(req as any).id
+    const role = (req as any).role
+
+    if(role!="admin"){
+        res.json({
+            msg:"You are not authorized"
+        })
+    }
+
+    try{
+
+        const findUser = await prismaClient.users.findUnique({
+            where:{
+                id:customerID
+            }
+        })
+
+        if(!findUser){
+            res.json({
+                msg:"User not found"
+            })
+        }
+
+        const findBorrow = await prismaClient.borrowed.findMany({
+            where: {
+                borrowed_user: customerID,
+                Status: false
+            },
+            include: {
+                books: true
+            }
+        })
+
+        if (findBorrow.length === 0) {
+            res.json({
+                msg: "No active borrowings found",
+                borrow: []
+            })
+        }
+
+        res.json({
+            msg: "Active borrowings retrieved successfully",
+            borrow: findBorrow
+        })
+
+    }catch(e){
+        res.json({
+            msg:(e as Error).toString()
+        })
+    }
+})
+
+
+app.post("/return/:id", middleware, async function(req, res) {
+    const book_id = parseInt(req.params.id)
+    const user_id = (req as any).id
+    const role = (req as any).role
+    const user = req.body.user
+
+    if(role != "admin"){
+        res.json({
+            msg: "Not authorized"
+        })
+    }
+
+    try {
+        const finduser = await prismaClient.users.findUnique({
+            where: {
+                id: ( user as number)
+            }
+        })
+
+        if(!finduser){
+            res.json({
+                msg: "Invalid User name"
+            })
+        }
+
+        const findBook = await prismaClient.books.findUnique({
+            where: {
+                id: book_id
+            }
+        })
+
+        if(!findBook){
+            res.json({
+                msg: "Book not found"
+            })
+        }
+
+        const return_user_id = finduser?.id
+
+        const findBorrow = await prismaClient.borrowed.findFirst({
+            where: {
+                borrowed_user: return_user_id,
+                book_id: book_id,
+                Status: false
+            }
+        })
+
+        if(!findBorrow){
+            res.json({
+                msg: "No active borrowing found for this book"
+            })
+        }
+
+        const updateBorrow = await prismaClient.borrowed.update({
+            where: {
+                id: findBorrow?.id
+            },
+            data: {
+                Status: true
+            }
+        })
+
+        const available = findBook?.Copies_available
+        const borrowed = findBook?.Copies_Borrowed
+
+        const books = await prismaClient.books.update({
+            where: {
+                id: book_id
+            },
+            data: {
+                Copies_available: (available as number) + 1,
+                Copies_Borrowed: (borrowed as number) - 1
+            }
+        })
+
+        const return_date = findBorrow?.return_date ? new Date(findBorrow?.return_date) : new Date()
+
+
+        const transaction = await prismaClient.transactions.create({
+            data: {
+                user_id: return_user_id!,
+                book_id: book_id,
+                amount: 0,
+                return_date: return_date,
+                Transaction_Date: new Date(),
+                Status:true
+            }
+        })
+
+        res.json({
+            msg: "Book returned successfully",
+            borrow: updateBorrow,
+            book: books,
+            transaction: transaction
+        })
+
+    } catch(e) {
+        res.json({
+            msg: (e as Error).toString()
+        })
+    }
+})
+
+
+
 
 const port = 8080
 
