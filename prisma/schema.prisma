@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,53 +7,53 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Users{
-  id            Int     @id @default(autoincrement()) @unique
-  username      String  @unique
-  email         String  @unique
-  password      String
-  role          String  
-  borrowed      Borrowed[]  
-  Transactions  Transactions[]
+model Users {
+  id           Int            @id @unique @default(autoincrement())
+  email        String         @unique
+  password     String
+  role         String
+  username     String         @unique
+  borrowed     Borrowed[]
+  Transactions Transactions[]
 }
 
-model Books{
-  id                Int @id @default(autoincrement()) @unique
-  title             String
-  author            String
-  ISBN              String  @unique
-  Published_year    String
-  Copies_availabe   Int
-  Copies_Borrowed   Int     @default(0)
-  borrowed          Borrowed[]
-  Transactions      Transactions[]
+model Books {
+  id               Int            @id @unique @default(autoincrement())
+  title            String
+  author           String
+  ISBN             String         @unique
+  Published_year   String
+  Copies_available Int
+  Copies_Borrowed  Int            @default(0)
+  borrowed         Borrowed[]
+  Transactions     Transactions[]
 }
 
-model Categories{
-  id              Int @id @default(autoincrement()) @unique
-  book_id         Int
+model Categories {
+  id      Int @id @unique @default(autoincrement())
+  book_id Int
 }
 
-model Borrowed{
-  id              Int @id @default(autoincrement()) @unique
-  borrowed_user   Int
-  book_id         Int
-  borrowed_date   Int
-  return_date     DateTime 
-  Status          Boolean @default(false)
-  user            Users   @relation(fields: [borrowed_user], references: [id])
-  books           Books   @relation(fields: [book_id],references: [id])
+model Borrowed {
+  id            Int      @id @unique @default(autoincrement())
+  borrowed_user Int
+  book_id       Int
+  borrowed_date DateTime
+  return_date   DateTime
+  Status        Boolean  @default(false)
+  books         Books    @relation(fields: [book_id], references: [id])
+  user          Users    @relation(fields: [borrowed_user], references: [id])
 }
 
-model Transactions{
-  id                Int @id @default(autoincrement()) @unique
-  user_id           Int
-  book_id           Int
-  amount            Int
-  Transaction_Date  DateTime  @default(now())
-  return_date       DateTime  
-  Status            Boolean   @default(false)
-  Fine_amount       Int       @default(0)
-  user              Users     @relation(fields: [user_id], references: [id])
-  books             Books     @relation(fields: [book_id],references: [id])
+model Transactions {
+  id               Int      @id @unique @default(autoincrement())
+  user_id          Int
+  book_id          Int
+  amount           Int
+  Transaction_Date DateTime @default(now())
+  return_date      DateTime
+  Status           Boolean  @default(false)
+  Fine_amount      Int      @default(0)
+  books            Books    @relation(fields: [book_id], references: [id])
+  user             Users    @relation(fields: [user_id], references: [id])
 }
