@@ -4,10 +4,13 @@ import bcrypt from 'bcrypt'
 import cors from 'cors'
 import prismaClient from "./db"
 import middleware from "./middleware";
-import { Param } from "@prisma/client/runtime/library";
-
 
 const app = express()
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}))
 app.use(express.json())
 
 const SECRET = process.env.SECRET
@@ -141,7 +144,8 @@ app.post("/login",async function(req,res){
 
         res.json({
             msg:"Login successful",
-            token:token
+            token:token,
+            role:role
         })
         
         
@@ -212,7 +216,36 @@ app.get("/books",middleware, async function(req,res){
 app.post("/borrow/:id", middleware, async function(req, res) {
     const book_id = parseInt(req.params.id)
     const user_id = (req as any).id  
+
     try {
+        const findUser = await prismaClient.users.findUnique({
+            where: {
+                id: user_id
+            }
+        })
+
+        if (!findUser) {
+            res.json({
+                msg: "User not found"
+            })
+            return
+        }
+
+        // Check if user has any unreturned books
+        const existingBorrow = await prismaClient.borrowed.findFirst({
+            where: {
+                borrowed_user: user_id,
+                Status: false // false means book is not returned yet
+            }
+        })
+
+        if (existingBorrow) {
+            res.json({
+                msg: "You already have a book borrowed. Please return it before borrowing another one."
+            })
+            return
+        }
+
         const book_available = await prismaClient.books.findUnique({
             where: {
                 id: book_id
@@ -220,20 +253,21 @@ app.post("/borrow/:id", middleware, async function(req, res) {
         })
 
         if (!book_available) {
-             res.json({  
+            res.json({  
                 msg: "We don't have this book on us"
             })
+            return
         }
 
         let copies = book_available?.Copies_available
         let borrowed = book_available?.Copies_Borrowed
 
         if (copies == 0) {
-             res.json({  
+            res.json({  
                 msg: "Sorry We don't have this book in stock right now"
             })
+            return
         }
-
 
         const checkout = await prismaClient.books.update({
             where: {
@@ -252,7 +286,6 @@ app.post("/borrow/:id", middleware, async function(req, res) {
                 amount: 30,
                 Transaction_Date: new Date(),
                 return_date: new Date(new Date().setDate(new Date().getDate() + 7)),
-
             }
         })
 
@@ -284,7 +317,10 @@ app.get("/my-books", middleware, async function(req, res) {
     try {
         const borrowedBooks = await prismaClient.borrowed.findMany({
             where: {
-                borrowed_user: user_id
+                borrowed_user: user_id,
+            },
+            include: {
+                books: true
             }
         })
 
@@ -356,7 +392,6 @@ app.get("/checkBorrow/:id",middleware,async function(req,res){
 
 app.post("/return/:id", middleware, async function(req, res) {
     const book_id = parseInt(req.params.id)
-    const user_id = (req as any).id
     const role = (req as any).role
     const user = req.body.user
 
