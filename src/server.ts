@@ -549,6 +549,46 @@ app.post("/return/:id", middleware, async function(req, res) {
     }
 })
 
+app.get("/transactions", middleware, async function(req, res) {
+    const role = (req as any).role
+
+    if (role !== "admin") {
+        res.json({
+            msg: "Not authorized to view transactions"
+        })
+        return
+    }
+
+    try {
+        const transactions = await prismaClient.transactions.findMany({
+            orderBy: {
+                Transaction_Date: 'desc'
+            },
+            include: {
+                user: {
+                    select: {
+                        username: true
+                    }
+                },
+                books: {
+                    select: {
+                        title: true
+                    }
+                }
+            }
+        })
+
+        res.json({
+            msg: "Transactions retrieved successfully",
+            transactions: transactions
+        })
+    } catch(e) {
+        res.json({
+            msg: (e as Error).toString()
+        })
+    }
+})
+
 
 
 
