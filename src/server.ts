@@ -334,7 +334,7 @@ app.get("/searchBook/:title",async function(req,res){
             where: {
                 title: {
                     contains: title,
-                    mode: 'insensitive' // Case-insensitive search
+                    mode: 'insensitive'
                 }
             },
             select: {
