@@ -215,12 +215,27 @@ app.get("/books",middleware, async function(req,res){
 
 app.post("/borrow/:id", middleware, async function(req, res) {
     const book_id = parseInt(req.params.id)
-    const user_id = (req as any).id  
+    const role = (req as any).role
+    const customer_id = parseInt(req.body.customer_id)
+
+    if (role !== "admin") {
+        res.json({
+            msg: "Only administrators can process book borrowing"
+        })
+        return
+    }
+
+    if (!customer_id) {
+        res.json({
+            msg: "Customer ID is required in the request body"
+        })
+        return
+    }
 
     try {
         const findUser = await prismaClient.users.findUnique({
             where: {
-                id: user_id
+                id: customer_id
             }
         })
 
@@ -231,17 +246,17 @@ app.post("/borrow/:id", middleware, async function(req, res) {
             return
         }
 
-        // Check if user has any unreturned books
+
         const existingBorrow = await prismaClient.borrowed.findFirst({
             where: {
-                borrowed_user: user_id,
-                Status: false // false means book is not returned yet
+                borrowed_user: customer_id,
+                Status: false 
             }
         })
 
         if (existingBorrow) {
             res.json({
-                msg: "You already have a book borrowed. Please return it before borrowing another one."
+                msg: "This customer already has a book borrowed. They must return it before borrowing another one."
             })
             return
         }
@@ -281,7 +296,7 @@ app.post("/borrow/:id", middleware, async function(req, res) {
 
         const transaction = await prismaClient.transactions.create({
             data: {
-                user_id: user_id,  
+                user_id: customer_id,  
                 book_id: book_id,
                 amount: 30,
                 Transaction_Date: new Date(),
@@ -291,7 +306,7 @@ app.post("/borrow/:id", middleware, async function(req, res) {
 
         const borrow = await prismaClient.borrowed.create({
             data: {
-                borrowed_user: user_id,  
+                borrowed_user: customer_id,  
                 book_id: book_id,
                 borrowed_date: new Date(),
                 return_date: new Date(new Date().setDate(new Date().getDate() + 7))
@@ -302,6 +317,48 @@ app.post("/borrow/:id", middleware, async function(req, res) {
             msg: "You got your book",
             transaction: transaction,
             book: checkout
+        })
+
+    } catch(e) {
+        res.json({
+            msg: (e as Error).toString()
+        })
+    }
+})
+
+app.get("/searchBook/:title",async function(req,res){
+    const title = req.params.title
+
+    try {
+        const books = await prismaClient.books.findMany({
+            where: {
+                title: {
+                    contains: title,
+                    mode: 'insensitive' // Case-insensitive search
+                }
+            },
+            select: {
+                id: true,
+                title: true,
+                author: true,
+                ISBN: true,
+                Published_year: true,
+                Copies_available: true,
+                Copies_Borrowed: true
+            }
+        })
+
+        if (books.length === 0) {
+            res.json({
+                msg: "No books found with that title",
+                books: []
+            })
+            return
+        }
+
+        res.json({
+            msg: "Books found successfully",
+            books: books
         })
 
     } catch(e) {
