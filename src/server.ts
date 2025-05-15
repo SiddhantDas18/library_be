@@ -190,14 +190,23 @@ app.post("/login",async function(req,res){
     }
 })
 
-
+interface bookProps{
+    title:string,
+    author:string,
+    ISBN:string,
+    published_year:string,
+    copies:number
+}
 
 app.post("/addBook", middleware, async function(req, res): Promise<void> {
-    const title = req.body.title
-    const author = req.body.author
-    const isbn = req.body.isbn
-    const published_year = req.body.year
-    const copies = req.body.copies
+
+    const addBooks:bookProps={
+        title:req.body.title,
+        author:req.body.author,
+        ISBN:req.body.ISBN,
+        published_year:req.body.published_year,
+        copies:req.body.copies
+    }
 
     const id = (req as any).id
     const role = (req as any).role
@@ -211,11 +220,11 @@ app.post("/addBook", middleware, async function(req, res): Promise<void> {
 
         const book = await prismaClient.books.create({
             data: {
-                title:title,
-                author:author,
-                ISBN:isbn,
-                Published_year:published_year,
-                Copies_available:copies,
+                title:addBooks.title,
+                author:addBooks.author,
+                ISBN:addBooks.ISBN,
+                Published_year:addBooks.published_year,
+                Copies_available:addBooks.copies,
             }
         })
 
