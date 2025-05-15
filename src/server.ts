@@ -129,19 +129,28 @@ app.post("/addUser",async function(req,res){
         res.json({
             msg:(e as Error).toString()
         })
-        
+
     }
 })
 
+interface userLogin{
+    username:string,
+    password:string,
+}
+
 app.post("/login",async function(req,res){
-    const username = req.body.username
-    const password = req.body.password
+
+    const inputLogin:userLogin={
+        username:req.body.username,
+        password:req.body.password
+    }
+    
 
     try{
 
         const user = await prismaClient.users.findUnique({
             where:{
-                username:username
+                username:inputLogin.username
             }
         })  
 
@@ -151,7 +160,7 @@ app.post("/login",async function(req,res){
             })
         }       
 
-        const isPasswordValid = await bcrypt.compare(password,user?.password || "")
+        const isPasswordValid = await bcrypt.compare(inputLogin.password,user?.password || "")
 
         if(!isPasswordValid){
             res.json({
@@ -180,6 +189,8 @@ app.post("/login",async function(req,res){
         })
     }
 })
+
+
 
 app.post("/addBook", middleware, async function(req, res): Promise<void> {
     const title = req.body.title
