@@ -15,22 +15,36 @@ app.use(express.json())
 
 const SECRET = process.env.SECRET
 
+interface adminProps{
+    username:string,
+    password:string,
+    email:string,
+    role:string
+}
+
 
 
 app.post("/addAdmin",async function(req,res){
-    const username = req.body.username
-    const password = req.body.password
-    const email = req.body.email
-    const role = "admin"
 
-    const hashedPassword = await bcrypt.hash(password,10)
+    const adminInput: adminProps = {
+        username: req.body.username,
+        password: req.body.password,
+        email: req.body.email,
+        role: "admin"
+    }
+    // const username = req.body.username
+    // const password = req.body.password
+    // const email = req.body.email
+    // const role = "admin"
+
+    const hashedPassword = await bcrypt.hash(adminInput.password,10)
 
     try{
 
 
         const checkUser = await prismaClient.users.findUnique({
             where:{
-                username:username
+                username:adminInput.username
             }
         })
 
@@ -42,10 +56,10 @@ app.post("/addAdmin",async function(req,res){
 
         const addUser = await prismaClient.users.create({
             data:{
-                username:username,
-                email:email,
+                username:adminInput.username,
+                email:adminInput.email,
                 password:hashedPassword,
-                role:role
+                role:adminInput.role
             }
         })
 
