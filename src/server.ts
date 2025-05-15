@@ -32,10 +32,7 @@ app.post("/addAdmin",async function(req,res){
         email: req.body.email,
         role: "admin"
     }
-    // const username = req.body.username
-    // const password = req.body.password
-    // const email = req.body.email
-    // const role = "admin"
+
 
     const hashedPassword = await bcrypt.hash(adminInput.password,10)
 
@@ -78,19 +75,30 @@ app.post("/addAdmin",async function(req,res){
     }
 })
 
-app.post("/addUser",async function(req,res){
-    const username = req.body.username
-    const password = req.body.password
-    const email = req.body.email
-    const role = "user"
+interface addUser{
+    username:string,
+    password:string,
+    email:string,
+    role:string
+}
 
-    const hashedPassword = await bcrypt.hash(password,10)
+app.post("/addUser",async function(req,res){
+
+    const userInput:addUser={
+        username:req.body.username,
+        password:req.body.password,
+        email:req.body.email,
+        role:"user",
+    }
+
+
+    const hashedPassword = await bcrypt.hash(userInput.password,10)
 
     try{
 
         const checkUser = await prismaClient.users.findUnique({
             where:{
-                username:username
+                username:userInput.username
             }
         })  
 
@@ -102,10 +110,10 @@ app.post("/addUser",async function(req,res){
 
         const addUser = await prismaClient.users.create({
             data:{
-                username:username,
-                email:email,
+                username:userInput.username,
+                email:userInput.email,
                 password:hashedPassword,
-                role:role
+                role:userInput.role
             }
         })  
 
@@ -117,9 +125,12 @@ app.post("/addUser",async function(req,res){
         
 
     }catch(e){
+
+        res.json({
+            msg:(e as Error).toString()
+        })
         
     }
-    
 })
 
 app.post("/login",async function(req,res){
