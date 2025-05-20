@@ -7,7 +7,7 @@ import middleware from "./middleware";
 
 const app = express()
 app.use(cors({
-    origin: '*',
+    origin: 'https://library-fe-05fk.onrender.com',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }))
